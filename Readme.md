@@ -5,6 +5,9 @@
 * [Default.aspx.cs](./CS/Default.aspx.cs) (VB: [Default.aspx.vb](./VB/Default.aspx.vb))
 <!-- default file list end -->
 # ASPxGridView - Batch Editing - How to update summaries when HighlightDeletedRows=true
+<!-- run online -->
+**[[Run Online]](https://codecentral.devexpress.com/t517531/)**
+<!-- run online end -->
 
 
 <p>This example illustrates how to modify the <a href="https://www.devexpress.com/Support/Center/p/T114923">ASPxGridView - How to update total summaries on the client side in Batch Edit mode</a> example to correctly calculate the total summary if the <a href="https://documentation.devexpress.com/#AspNet/DevExpressWebGridViewBatchEditSettings_HighlightDeletedRowstopic">GridViewBatchEditSettings.HighlightDeletedRows</a> property is enabled. <br><br></p>
