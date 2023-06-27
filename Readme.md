@@ -1,6 +1,6 @@
 # Grid View for ASP.NET Web Forms - How to update total summaries on the client in batch edit mode when deleted rows are highlighted
 <!-- run online -->
-**[[Run Online]](https://codecentral.devexpress.com/t517531/)**
+**[[Run Online]](https://codecentral.devexpress.com/128532999/)**
 <!-- run online end -->
 
 This example demonstrates how to calculate the total summary dynamically in batch edit mode when the grid's [HighlightDeletedRows](https://docs.devexpress.com/AspNet/DevExpress.Web.GridViewBatchEditSettings.HighlightDeletedRows) property is enabled. 
