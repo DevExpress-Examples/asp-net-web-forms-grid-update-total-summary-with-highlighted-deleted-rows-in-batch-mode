@@ -1,64 +1,118 @@
-<!-- default badges list -->
-![](https://img.shields.io/endpoint?url=https://codecentral.devexpress.com/api/v1/VersionRange/128532999/16.2.6%2B)
-[![](https://img.shields.io/badge/Open_in_DevExpress_Support_Center-FF7200?style=flat-square&logo=DevExpress&logoColor=white)](https://supportcenter.devexpress.com/ticket/details/T517531)
-[![](https://img.shields.io/badge/📖_How_to_use_DevExpress_Examples-e9f6fc?style=flat-square)](https://docs.devexpress.com/GeneralInformation/403183)
-<!-- default badges end -->
-<!-- default file list -->
-*Files to look at*:
-
-* [Default.aspx](./CS/Default.aspx) (VB: [Default.aspx](./VB/Default.aspx))
-* [Default.aspx.cs](./CS/Default.aspx.cs) (VB: [Default.aspx.vb](./VB/Default.aspx.vb))
-<!-- default file list end -->
-# ASPxGridView - Batch Editing - How to update summaries when HighlightDeletedRows=true
+# Grid View for ASP.NET Web Forms - How to update total summaries on the client in batch edit mode when deleted rows are highlighted
 <!-- run online -->
 **[[Run Online]](https://codecentral.devexpress.com/t517531/)**
 <!-- run online end -->
 
+This example demonstrates how to calculate the total summary dynamically in batch edit mode when the grid's [HighlightDeletedRows](https://docs.devexpress.com/AspNet/DevExpress.Web.GridViewBatchEditSettings.HighlightDeletedRows) property is enabled. 
 
-<p>This example illustrates how to modify the <a href="https://www.devexpress.com/Support/Center/p/T114923">ASPxGridView - How to update total summaries on the client side in Batch Edit mode</a> example to correctly calculate the total summary if the <a href="https://documentation.devexpress.com/#AspNet/DevExpressWebGridViewBatchEditSettings_HighlightDeletedRowstopic">GridViewBatchEditSettings.HighlightDeletedRows</a> property is enabled. <br><br></p>
-<p><strong>See Also:</strong></p>
-<p><a href="https://www.devexpress.com/Support/Center/p/T114539">ASPxGridView - Batch Edit - How to calculate values on the fly</a> <br><a href="https://www.devexpress.com/Support/Center/p/T116925">ASPxGridView - Batch Edit - How to calculate unbound column and total summary values on the fly</a> <br><br><strong>ASP.NET MVC Example:</strong><br><a href="https://www.devexpress.com/Support/Center/p/T137186">GridView - How to update total summaries on the client side in Batch Edit mode</a></p>
+![Calculate total summaries in batch edit mode](TotalSummaryBatchMode.png)
 
+## Overview
 
-<h3>Description</h3>
+### Create a Custom Summary Item
 
-<p>For this,&nbsp;create a custom Recovery button:</p>
-<code lang="aspx">&lt;dx:GridViewCommandColumn ShowNewButtonInHeader="true" ShowDeleteButton="true"&gt;
-    &lt;CustomButtons&gt;
-        &lt;dx:GridViewCommandColumnCustomButton ID="customRecover" Text="Recover"&gt;&lt;/dx:GridViewCommandColumnCustomButton&gt;
-    &lt;/CustomButtons&gt;
-&lt;/dx:GridViewCommandColumn&gt;
-</code>
-<p>&nbsp;To manipulate the button visibility, add the following custom CSS classes:</p>
-<code lang="aspx">&lt;Styles&gt;
-    &lt;CommandColumnItem CssClass="commandCell"&gt;&lt;/CommandColumnItem&gt;
-    &lt;BatchEditDeletedRow CssClass="deletedRow"&gt;&lt;/BatchEditDeletedRow&gt;
-&lt;/Styles&gt;
-</code>
-<p>&nbsp;These CSS rules allow showing a custom Recovery button when it is required:</p>
-<code lang="css">.deletedRow a[data-args*="customRecover"].commandCell {
+Add a total summary item for the corresponding column. Use the item's [Tag](https://docs.devexpress.com/AspNet/DevExpress.Web.ASPxSummaryItemBase.Tag) property to identify the summary item and get its value.
+
+```aspx
+<TotalSummary>
+    <dx:ASPxSummaryItem SummaryType="Sum" FieldName="C2" Tag="C2_Sum" />
+</TotalSummary>
+```
+
+```cs
+protected object GetTotalSummaryValue() {
+    ASPxSummaryItem summaryItem = Grid.TotalSummary.First(i => i.Tag == "C2_Sum");
+    return Grid.GetTotalSummaryValue(summaryItem);
+}
+```
+
+Replace the summary item with a custom [footer template](https://docs.devexpress.com/AspNet/DevExpress.Web.GridViewColumn.FooterTemplate).
+
+```aspx
+<dx:GridViewDataSpinEditColumn Width="100" FieldName="C2">
+    <FooterTemplate>
+        Sum =
+        <dx:ASPxLabel ID="ASPxLabel1" runat="server" ClientInstanceName="labelSum" Text='<%# GetTotalSummaryValue() %>' />
+    </FooterTemplate>
+</dx:GridViewDataSpinEditColumn>
+```
+
+Handle the grid's client-side [BatchEditEndEditing](https://docs.devexpress.com/AspNet/js-ASPxClientGridView.BatchEditEndEditing) and [BatchEditRowDeleting](https://docs.devexpress.com/AspNet/js-ASPxClientGridView.BatchEditRowDeleting) events. In handlers, use the grid's [batchEditApi.GetCellValue](https://docs.devexpress.com/AspNet/js-ASPxClientGridViewBatchEditApi.GetCellValue(visibleIndex-columnFieldNameOrId)) method to get initial cell values and `rowValues` argument property to get new cell values. Then recalculate the summary value and assign it to the label.
+
+```js
+function OnBatchEditEndEditing(s, e) {
+    CalculateSummary(s, e.rowValues, e.visibleIndex, false);
+}
+function CalculateSummary(grid, rowValues, visibleIndex, isDeleting) {
+    var originalValue = grid.batchEditApi.GetCellValue(visibleIndex, "C2");
+    var newValue = rowValues[(grid.GetColumnByField("C2").index)].value;
+    var dif = isDeleting ? -newValue : newValue - originalValue;
+    labelSum.SetValue((parseFloat(labelSum.GetValue()) + dif).toFixed(1));
+}
+function OnBatchEditRowDeleting(s, e) {
+    CalculateSummary(s, e.rowValues, e.visibleIndex, true);
+}
+```
+
+### Create a Custom Recovery Button
+
+Use the command column's [CustomButtons](https://docs.devexpress.com/AspNet/DevExpress.Web.GridViewCommandColumn.CustomButtons) property to create a custom **Recovery** button.
+
+```aspx
+<dx:GridViewCommandColumn ShowNewButtonInHeader="true" ShowDeleteButton="true" ShowRecoverButton="true">
+    <CustomButtons>
+        <dx:GridViewCommandColumnCustomButton ID="customRecover" Text="Recover"></dx:GridViewCommandColumnCustomButton>
+    </CustomButtons>
+</dx:GridViewCommandColumn>
+```
+
+Add custom CSS classes to control the custom button's visibility based on a condition and hide the default **Recovery** button.
+
+```aspx
+<Styles>
+    <CommandColumnItem CssClass="commandCell"></CommandColumnItem>
+    <BatchEditDeletedRow CssClass="deletedRow"></BatchEditDeletedRow>
+</Styles>
+```
+
+```css
+.deletedRow a[data-args*="customRecover"].commandCell {
     display: inline !important;
 }
+
 a[data-args*="customRecover"].commandCell {
     display: none;
 }
-</code>
-<p>&nbsp;To hide the standard Recovery button, use the following rule:</p>
-<code lang="css">a[data-args*="Recover"].commandCell {
+
+a[data-args*="Recover"].commandCell {
     display: none;
 }
-</code>
-<p>&nbsp;Finally, handle the&nbsp;<a href="https://documentation.devexpress.com/#AspNet/DevExpressWebScriptsASPxClientGridView_CustomButtonClicktopic">ASPxClientGridView.CustomButtonClick</a>&nbsp;event to restore the row and calculate the total summary after that:&nbsp;</p>
-<code lang="js">function OnCustomButtonClick(s, e) {
+```
+
+Handle the grid's client-side [CustomButtonClick](https://docs.devexpress.com/AspNet/js-ASPxClientGridView.CustomButtonClick) event to restore the deleted row and recalculate the total summary.
+
+```js
+function OnCustomButtonClick(s, e) {
     if (e.buttonID == 'customRecover') {
         s.batchEditApi.ResetChanges(e.visibleIndex);
         var value = s.batchEditApi.GetCellValue(e.visibleIndex, "C2");
         labelSum.SetValue((parseFloat(labelSum.GetValue()) + value).toFixed(1));
     }
 }
-</code>
-<p>&nbsp;</p>
+```
 
-<br/>
+## Files to Review
 
+* [Default.aspx](./CS/Default.aspx) (VB: [Default.aspx](./VB/Default.aspx))
+* [Default.aspx.cs](./CS/Default.aspx.cs) (VB: [Default.aspx.vb](./VB/Default.aspx.vb))
 
+## Documentation
+
+* [Grid in Batch Edit Mode](https://docs.devexpress.com/AspNet/16443/components/grid-view/concepts/edit-data/batch-edit-mode)
+
+## More Examples
+
+* [Grid View for ASP.NET Web Forms - How to update total summaries on the client in batch edit mode](https://github.com/DevExpress-Examples/asp-net-web-forms-grid-update-total-summaries-on-client-in-batch-mode)
+* [Grid View for ASP.NET Web Forms - How to calculate values dynamically in batch edit mode](https://github.com/DevExpress-Examples/asp-net-web-forms-gridview-calculate-values-dynamically-batch-mode)
+* [Grid View for ASP.NET Web Forms - How to calculate values and update total summaries dynamically in batch edit mode](https://github.com/DevExpress-Examples/asp-net-web-forms-grid-calculate-column-values-and-total-summaries-in-batch-mode)
+* [Grid View for ASP.NET MVC - How to update total summaries on the client in batch edit mode](https://github.com/DevExpress-Examples/asp-net-mvc-grid-update-total-summaries-on-client-in-batch-mode)
